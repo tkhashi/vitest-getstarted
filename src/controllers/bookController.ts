@@ -5,11 +5,9 @@ import { CreateBookDto, UpdateBookDto, ApiError } from '../types';
 // すべての本を取得
 export const getAllBooks = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('query:', req.query);
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
-    console.log('req page:', req.query.page);
 
     const [books, total] = await Promise.all([
       prisma.book.findMany({
@@ -34,9 +32,6 @@ export const getAllBooks = async (req: Request, res: Response, next: NextFunctio
       categories: book.categories.map(bc => bc.category)
     }));
 
-    console.log(`ここまで来れるか？: ${JSON.stringify(formattedBooks)}`);
-    console.log(`meta: ${JSON.stringify({ total, page, limit, totalPages: Math.ceil(total / limit) })}`);
-
     res.json({
       data: formattedBooks,
       meta: {
@@ -47,7 +42,6 @@ export const getAllBooks = async (req: Request, res: Response, next: NextFunctio
       },
     });
   } catch (error) {
-    console.log('Error fetching books:', error);
     next(error);
   }
 };
@@ -202,7 +196,6 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
       });
 
       if (duplicateIsbn) {
-        console.error('ISBN重複エラー:', duplicateIsbn);
         throw new ApiError(400, 'この ISBN は既に使用されています');
       }
     }

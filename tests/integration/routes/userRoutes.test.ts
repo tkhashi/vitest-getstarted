@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import supertest from 'supertest';
 import app from '../../../src/app';
 import { prisma } from '../../setup';
@@ -19,7 +20,10 @@ describe('ユーザーAPI統合テスト', () => {
   });
 
   afterEach(async () => {
-    // テストで作成したユーザーを削除
+    // テストで作成したデータを削除（順序に注意）
+    await prisma.loan.deleteMany({});
+    await prisma.book.deleteMany({});
+    await prisma.author.deleteMany({});
     await prisma.user.deleteMany({});
   });
 
@@ -49,6 +53,13 @@ describe('ユーザーAPI統合テスト', () => {
 
   describe('GET /api/users/:id', () => {
     it('存在するユーザーのIDでユーザー詳細を取得できる', async () => {
+      // ここでテストデータの存在確認
+      const existingUser = await prisma.user.findUnique({
+        where: { id: testUserId }
+      });
+      
+      expect(existingUser).not.toBeNull();
+      
       const response = await request
         .get(`/api/users/${testUserId}`)
         .expect('Content-Type', /json/)
@@ -162,6 +173,12 @@ describe('ユーザーAPI統合テスト', () => {
     });
 
     it('貸出中のユーザーは削除できない', async () => {
+      // テストの前に状態を確認
+      const initialUser = await prisma.user.findUnique({
+        where: { id: testUserId },
+        include: { loans: true }
+      });
+      
       // テスト用の著者を作成
       const author = await prisma.author.create({
         data: {
@@ -184,12 +201,13 @@ describe('ユーザーAPI統合テスト', () => {
       });
 
       // テスト用の貸出を作成（未返却）
-      await prisma.loan.create({
+      const loan = await prisma.loan.create({
         data: {
           userId: testUserId,
           bookId: book.id,
           borrowedAt: new Date(),
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 2週間後
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2週間後
+          returnedAt: null
         }
       });
 
@@ -199,11 +217,31 @@ describe('ユーザーAPI統合テスト', () => {
         data: { available: 0 }
       });
 
+      // 貸出が実際に作成されたことを確認
+      const activeLoans = await prisma.loan.count({
+        where: {
+          userId: testUserId,
+          returnedAt: null
+        }
+      });
+      expect(activeLoans).toBeGreaterThan(0);
+
       // 貸出中のユーザーを削除しようとすると400エラー
-      await request
+      const response = await request
         .delete(`/api/users/${testUserId}`)
         .expect('Content-Type', /json/)
         .expect(400);
+      
+      // エラーの検証方法を変更
+      const responseBody = response.body;
+      // 複数の方法でエラーメッセージを検証
+      if (typeof responseBody === 'object' && responseBody !== null) {
+        // エラーメッセージが直接オブジェクトにある場合
+        expect(responseBody.message || responseBody.error || responseBody).toMatch(/未返却の本があるユーザーは削除できません/);
+      } else if (typeof responseBody === 'string') {
+        // レスポンスが文字列の場合
+        expect(responseBody).toMatch(/未返却の本があるユーザーは削除できません/);
+      }
     });
   });
 });
