@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザーモデル
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  loans     Loan[]   // ユーザーの貸出履歴 (1対多の関係)
+}
+
+// 著者モデル
+model Author {
+  id        Int      @id @default(autoincrement())
+  name      String
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  books     Book[]   // 著者の書籍 (1対多の関係)
+}
+
+// 本モデル
+model Book {
+  id          Int           @id @default(autoincrement())
+  title       String
+  isbn        String        @unique
+  description String?
+  published   DateTime?
+  quantity    Int           @default(1)
+  available   Int           @default(1)
+  authorId    Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  author      Author        @relation(fields: [authorId], references: [id])
+  loans       Loan[]        // 本の貸出履歴 (1対多の関係)
+  categories  BookCategory[] // 本のカテゴリ (多対多の関係)
+}
+
+// カテゴリモデル
+model Category {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  books       BookCategory[] // カテゴリの本 (多対多の関係)
+}
+
+// 本とカテゴリの多対多関係を表す中間テーブル
+model BookCategory {
+  id         Int      @id @default(autoincrement())
+  bookId     Int
+  categoryId Int
+  book       Book     @relation(fields: [bookId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([bookId, categoryId])
+}
+
+// 貸出モデル
+model Loan {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  bookId     Int
+  borrowedAt DateTime  @default(now())
+  dueDate    DateTime
+  returnedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+  book       Book      @relation(fields: [bookId], references: [id])
+}

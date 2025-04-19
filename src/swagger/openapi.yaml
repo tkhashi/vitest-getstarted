@@ -1,0 +1,805 @@
+openapi: 3.0.0
+info:
+  title: 図書館管理システム API
+  description: 本の管理、ユーザー管理、貸出返却の管理ができるAPIです
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: ローカル開発サーバー
+
+paths:
+  /api/users:
+    get:
+      summary: すべてのユーザーを取得
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: 1ページあたりの件数
+      responses:
+        '200':
+          description: ユーザーリスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      summary: 新しいユーザーを作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '201':
+          description: 作成されたユーザー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 特定のユーザーを取得
+      responses:
+        '200':
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithLoans'
+        '404':
+          description: ユーザーが見つからない
+    put:
+      summary: ユーザー情報を更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateInput'
+      responses:
+        '200':
+          description: 更新されたユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: ユーザーが見つからない
+    delete:
+      summary: ユーザーを削除
+      responses:
+        '204':
+          description: ユーザーが削除された
+        '404':
+          description: ユーザーが見つからない
+        '400':
+          description: 未返却の本があるユーザーは削除できない
+
+  /api/books:
+    get:
+      summary: すべての本を取得
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: 1ページあたりの件数
+      responses:
+        '200':
+          description: 本のリスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookWithCategories'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      summary: 新しい本を作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookInput'
+      responses:
+        '201':
+          description: 作成された本
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookWithCategories'
+
+  /api/books/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 特定の本を取得
+      responses:
+        '200':
+          description: 本の情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookWithDetails'
+        '404':
+          description: 本が見つからない
+    put:
+      summary: 本の情報を更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookUpdateInput'
+      responses:
+        '200':
+          description: 更新された本の情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookWithCategories'
+        '404':
+          description: 本が見つからない
+    delete:
+      summary: 本を削除
+      responses:
+        '204':
+          description: 本が削除された
+        '404':
+          description: 本が見つからない
+        '400':
+          description: 貸出中の本は削除できない
+
+  /api/authors:
+    get:
+      summary: すべての著者を取得
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: 1ページあたりの件数
+      responses:
+        '200':
+          description: 著者リスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Author'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      summary: 新しい著者を作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorInput'
+      responses:
+        '201':
+          description: 作成された著者
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+
+  /api/authors/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 特定の著者を取得
+      responses:
+        '200':
+          description: 著者情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorWithBooks'
+        '404':
+          description: 著者が見つからない
+    put:
+      summary: 著者情報を更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorUpdateInput'
+      responses:
+        '200':
+          description: 更新された著者情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Author'
+        '404':
+          description: 著者が見つからない
+    delete:
+      summary: 著者を削除
+      responses:
+        '204':
+          description: 著者が削除された
+        '404':
+          description: 著者が見つからない
+        '400':
+          description: この著者の本が存在するため削除できない
+
+  /api/categories:
+    get:
+      summary: すべてのカテゴリを取得
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: 1ページあたりの件数
+      responses:
+        '200':
+          description: カテゴリリスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      summary: 新しいカテゴリを作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: 作成されたカテゴリ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
+  /api/categories/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 特定のカテゴリを取得
+      responses:
+        '200':
+          description: カテゴリ情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryWithBooks'
+        '404':
+          description: カテゴリが見つからない
+    put:
+      summary: カテゴリ情報を更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateInput'
+      responses:
+        '200':
+          description: 更新されたカテゴリ情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: カテゴリが見つからない
+    delete:
+      summary: カテゴリを削除
+      responses:
+        '204':
+          description: カテゴリが削除された
+        '404':
+          description: カテゴリが見つからない
+        '400':
+          description: このカテゴリの本が存在するため削除できない
+
+  /api/loans:
+    get:
+      summary: すべての貸出情報を取得
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: ページ番号
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: 1ページあたりの件数
+        - name: active
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: アクティブな貸出のみを表示
+      responses:
+        '200':
+          description: 貸出リスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LoanWithDetails'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+    post:
+      summary: 新しい貸出を作成（本を借りる）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanInput'
+      responses:
+        '201':
+          description: 作成された貸出
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanWithDetails'
+
+  /api/loans/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: 特定の貸出情報を取得
+      responses:
+        '200':
+          description: 貸出情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanWithDetails'
+        '404':
+          description: 貸出が見つからない
+    put:
+      summary: 貸出情報を更新（返却処理など）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanUpdateInput'
+      responses:
+        '200':
+          description: 更新された貸出情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanWithDetails'
+        '404':
+          description: 貸出が見つからない
+    delete:
+      summary: 貸出情報を削除
+      responses:
+        '204':
+          description: 貸出が削除された
+        '404':
+          description: 貸出が見つからない
+        '400':
+          description: 未返却の貸出は削除できない
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    UserWithLoans:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            loans:
+              type: array
+              items:
+                $ref: '#/components/schemas/Loan'
+    
+    UserInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          format: password
+    
+    UserUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+          format: password
+    
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    AuthorWithBooks:
+      allOf:
+        - $ref: '#/components/schemas/Author'
+        - type: object
+          properties:
+            books:
+              type: array
+              items:
+                $ref: '#/components/schemas/Book'
+    
+    AuthorInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+    
+    AuthorUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+    
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        isbn:
+          type: string
+        description:
+          type: string
+          nullable: true
+        published:
+          type: string
+          format: date-time
+          nullable: true
+        quantity:
+          type: integer
+        available:
+          type: integer
+        authorId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    BookWithAuthor:
+      allOf:
+        - $ref: '#/components/schemas/Book'
+        - type: object
+          properties:
+            author:
+              $ref: '#/components/schemas/Author'
+    
+    BookWithCategories:
+      allOf:
+        - $ref: '#/components/schemas/BookWithAuthor'
+        - type: object
+          properties:
+            categories:
+              type: array
+              items:
+                $ref: '#/components/schemas/Category'
+    
+    BookWithDetails:
+      allOf:
+        - $ref: '#/components/schemas/BookWithCategories'
+        - type: object
+          properties:
+            loans:
+              type: array
+              items:
+                $ref: '#/components/schemas/LoanWithUser'
+    
+    BookInput:
+      type: object
+      required:
+        - title
+        - isbn
+        - authorId
+      properties:
+        title:
+          type: string
+        isbn:
+          type: string
+        description:
+          type: string
+        published:
+          type: string
+          format: date-time
+        quantity:
+          type: integer
+          default: 1
+        authorId:
+          type: integer
+        categoryIds:
+          type: array
+          items:
+            type: integer
+    
+    BookUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        isbn:
+          type: string
+        description:
+          type: string
+        published:
+          type: string
+          format: date-time
+        quantity:
+          type: integer
+        authorId:
+          type: integer
+        categoryIds:
+          type: array
+          items:
+            type: integer
+    
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    CategoryWithBooks:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          properties:
+            books:
+              type: array
+              items:
+                $ref: '#/components/schemas/BookWithAuthor'
+    
+    CategoryInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    
+    CategoryUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    
+    Loan:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        bookId:
+          type: integer
+        borrowedAt:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        returnedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    LoanWithUser:
+      allOf:
+        - $ref: '#/components/schemas/Loan'
+        - type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+    
+    LoanWithBook:
+      allOf:
+        - $ref: '#/components/schemas/Loan'
+        - type: object
+          properties:
+            book:
+              $ref: '#/components/schemas/BookWithAuthor'
+    
+    LoanWithDetails:
+      allOf:
+        - $ref: '#/components/schemas/Loan'
+        - type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            book:
+              $ref: '#/components/schemas/BookWithAuthor'
+    
+    LoanInput:
+      type: object
+      required:
+        - userId
+        - bookId
+        - dueDate
+      properties:
+        userId:
+          type: integer
+        bookId:
+          type: integer
+        dueDate:
+          type: string
+          format: date-time
+    
+    LoanUpdateInput:
+      type: object
+      properties:
+        returnedAt:
+          type: string
+          format: date-time
+          nullable: true
+    
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
