@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 
 // テスト用のデータベースパスを設定
-const testDbPath = path.join(__dirname, '../prisma/test.db');
+const testDbPath = path.join(__dirname, '../test.db');
 
 // テスト用のPrismaクライアント
 export const prisma = new PrismaClient({
