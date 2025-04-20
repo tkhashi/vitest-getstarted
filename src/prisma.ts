@@ -1,4 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
 // Prismaクライアントのグローバルインスタンス
-export const prisma = new PrismaClient();
+// テスト環境と本番環境で異なるデータベース接続を使用
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  log: process.env.NODE_ENV === 'test' ? ['query', 'error', 'warn'] : ['error'],
+});
+
+export { prisma };

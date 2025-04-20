@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
 import app from '../../src/app';
-import { prisma } from '../../src/prisma';
+import { prisma } from '../setup'; // テスト用のPrismaインスタンスを使用
 import { createTestUser, createTestAuthor, createTestBook } from '../fixtures/testData';
 
 const request = supertest(app);
