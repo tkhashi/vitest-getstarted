@@ -52,6 +52,8 @@ http://localhost:3000/api-docs
 
 ### ER 図 (DBML)
 
+<img width="1131" alt="スクリーンショット 2025-04-20 17 56 04" src="https://github.com/user-attachments/assets/ab509e45-ceb5-4b3e-a89e-8ba0201a0ee5" />
+
 ```dbml
 Table User {
   id integer [pk, increment]
