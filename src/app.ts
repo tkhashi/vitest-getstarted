@@ -2,8 +2,8 @@ import express, { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 import YAML from 'yaml';
-import { PrismaClient } from '@prisma/client';
 import { errorHandler } from './middlewares/errorHandler';
+import { prisma } from './prisma';
 
 // ルーターのインポート
 import userRouter from './routes/userRoutes';
@@ -11,9 +11,6 @@ import bookRouter from './routes/bookRoutes';
 import authorRouter from './routes/authorRoutes';
 import categoryRouter from './routes/categoryRoutes';
 import loanRouter from './routes/loanRoutes';
-
-// Prismaクライアントのグローバルインスタンス
-export const prisma = new PrismaClient();
 
 const app: Express = express();
 

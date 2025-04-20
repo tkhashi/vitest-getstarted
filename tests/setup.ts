@@ -13,6 +13,7 @@ export const prisma = new PrismaClient({
       url: `file:${testDbPath}`,
     },
   },
+  log: ['query', 'error', 'warn'],  // ログレベルを追加して詳細な情報を表示
 });
 
 // グローバルな前処理

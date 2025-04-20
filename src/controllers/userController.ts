@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prisma';
 import { CreateUserDto, UpdateUserDto, ApiError } from '../types';
 
 // すべてのユーザーを取得
@@ -42,29 +42,40 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
 // 特定のユーザーを取得
 export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+    
     const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-        password: false,
+      where: { id: numericId },
+      include: {
         loans: {
           include: {
-            book: true,
+            book: {
+              include: {
+                author: true
+              }
+            }
           },
-        },
-      },
+          orderBy: {
+            borrowedAt: 'desc'
+          }
+        }
+      }
     });
 
     if (!user) {
       throw new ApiError(404, 'ユーザーが見つかりません');
     }
 
-    res.json(user);
+    // パスワードを除外
+    const { password, ...userWithoutPassword } = user;
+
+    res.json(userWithoutPassword);
   } catch (error) {
     next(error);
   }
@@ -107,6 +118,11 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
   try {
     const id = parseInt(req.params.id);
     const userData: UpdateUserDto = req.body;
+
+    // IDが有効な数値かチェック
+    if (isNaN(id)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
 
     // ユーザーの存在確認
     const existingUser = await prisma.user.findUnique({
@@ -151,6 +167,11 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // IDが有効な数値かチェック
+    if (isNaN(id)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
     
     // ユーザーの存在確認
     const existingUser = await prisma.user.findUnique({

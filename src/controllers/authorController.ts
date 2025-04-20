@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prisma';
 import { CreateAuthorDto, UpdateAuthorDto, ApiError } from '../types';
 
 // すべての著者を取得
@@ -34,11 +34,26 @@ export const getAllAuthors = async (req: Request, res: Response, next: NextFunct
 // 特定の著者を取得
 export const getAuthorById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+    
     const author = await prisma.author.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
-        books: true,
+        books: {
+          include: {
+            categories: {
+              include: {
+                category: true
+              }
+            }
+          }
+        },
       },
     });
 
@@ -46,7 +61,16 @@ export const getAuthorById = async (req: Request, res: Response, next: NextFunct
       throw new ApiError(404, '著者が見つかりません');
     }
 
-    res.json(author);
+    // 本の情報を整形
+    const formattedAuthor = {
+      ...author,
+      books: author.books.map(book => ({
+        ...book,
+        categories: book.categories.map(bc => bc.category)
+      }))
+    };
+
+    res.json(formattedAuthor);
   } catch (error) {
     next(error);
   }
@@ -70,12 +94,18 @@ export const createAuthor = async (req: Request, res: Response, next: NextFuncti
 // 著者情報を更新
 export const updateAuthor = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
     const authorData: UpdateAuthorDto = req.body;
+
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
 
     // 著者の存在確認
     const existingAuthor = await prisma.author.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingAuthor) {
@@ -83,7 +113,7 @@ export const updateAuthor = async (req: Request, res: Response, next: NextFuncti
     }
 
     const updatedAuthor = await prisma.author.update({
-      where: { id },
+      where: { id: numericId },
       data: authorData,
     });
 
@@ -96,11 +126,17 @@ export const updateAuthor = async (req: Request, res: Response, next: NextFuncti
 // 著者を削除
 export const deleteAuthor = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
     
     // 著者の存在確認
     const existingAuthor = await prisma.author.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingAuthor) {
@@ -109,7 +145,7 @@ export const deleteAuthor = async (req: Request, res: Response, next: NextFuncti
 
     // 著者に関連付けられた本の確認
     const booksCount = await prisma.book.count({
-      where: { authorId: id },
+      where: { authorId: numericId },
     });
 
     if (booksCount > 0) {
@@ -117,7 +153,7 @@ export const deleteAuthor = async (req: Request, res: Response, next: NextFuncti
     }
 
     await prisma.author.delete({
-      where: { id },
+      where: { id: numericId },
     });
 
     res.status(204).send();

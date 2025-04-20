@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prisma';
 import { CreateLoanDto, UpdateLoanDto, ApiError } from '../types';
 
 // すべての貸出情報を取得
@@ -56,9 +56,16 @@ export const getAllLoans = async (req: Request, res: Response, next: NextFunctio
 // 特定の貸出情報を取得
 export const getLoanById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+    
     const loan = await prisma.loan.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
         user: {
           select: {
@@ -153,12 +160,18 @@ export const createLoan = async (req: Request, res: Response, next: NextFunction
 // 貸出情報を更新（本を返却など）
 export const updateLoan = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
     const loanData: UpdateLoanDto = req.body;
+
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
 
     // 貸出の存在確認
     const existingLoan = await prisma.loan.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingLoan) {
@@ -200,7 +213,7 @@ export const updateLoan = async (req: Request, res: Response, next: NextFunction
 
       // 貸出を更新
       return tx.loan.update({
-        where: { id },
+        where: { id: numericId },
         data: loanData,
         include: {
           user: {
@@ -228,11 +241,17 @@ export const updateLoan = async (req: Request, res: Response, next: NextFunction
 // 貸出情報を削除
 export const deleteLoan = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
     
     // 貸出の存在確認
     const existingLoan = await prisma.loan.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingLoan) {
@@ -245,7 +264,7 @@ export const deleteLoan = async (req: Request, res: Response, next: NextFunction
     }
 
     await prisma.loan.delete({
-      where: { id },
+      where: { id: numericId },
     });
 
     res.status(204).send();

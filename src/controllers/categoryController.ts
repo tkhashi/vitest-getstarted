@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prisma';
 import { CreateCategoryDto, UpdateCategoryDto, ApiError } from '../types';
 
 // すべてのカテゴリを取得
@@ -35,6 +35,12 @@ export const getAllCategories = async (req: Request, res: Response, next: NextFu
 export const getCategoryById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // IDが有効な数値かチェック
+    if (isNaN(id)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+    
     const category = await prisma.category.findUnique({
       where: { id },
       include: {
@@ -96,6 +102,11 @@ export const updateCategory = async (req: Request, res: Response, next: NextFunc
     const id = parseInt(req.params.id);
     const categoryData: UpdateCategoryDto = req.body;
 
+    // IDが有効な数値かチェック
+    if (isNaN(id)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+
     // カテゴリの存在確認
     const existingCategory = await prisma.category.findUnique({
       where: { id },
@@ -131,6 +142,11 @@ export const updateCategory = async (req: Request, res: Response, next: NextFunc
 export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = parseInt(req.params.id);
+    
+    // IDが有効な数値かチェック
+    if (isNaN(id)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
     
     // カテゴリの存在確認
     const existingCategory = await prisma.category.findUnique({

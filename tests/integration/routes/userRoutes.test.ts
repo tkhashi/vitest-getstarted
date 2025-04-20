@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-
 import supertest from 'supertest';
 import app from '../../../src/app';
-import { prisma } from '../../setup';
+import { prisma } from '../../../src/prisma';  // アプリケーションのPrismaクライアントを使用
 import { createTestUser } from '../../fixtures/testData';
 
 const request = supertest(app);
@@ -17,14 +16,17 @@ describe('ユーザーAPI統合テスト', () => {
       data: userData
     });
     testUserId = user.id;
+    console.log(`テストユーザーを作成しました: ID=${user.id}, Email=${user.email}`);
   });
 
   afterEach(async () => {
-    // テストで作成したデータを削除（順序に注意）
-    await prisma.loan.deleteMany({});
-    await prisma.book.deleteMany({});
-    await prisma.author.deleteMany({});
-    await prisma.user.deleteMany({});
+    // テストで作成したデータを削除（依存関係の順序に注意）
+    await prisma.loan.deleteMany({});        // 最初に貸出データを削除
+    await prisma.bookCategory.deleteMany({}); // 次に書籍とカテゴリの関連を削除
+    await prisma.book.deleteMany({});         // その後に書籍を削除
+    await prisma.category.deleteMany({});     // カテゴリを削除
+    await prisma.author.deleteMany({});       // 著者を削除
+    await prisma.user.deleteMany({});         // 最後にユーザーを削除
   });
 
   describe('GET /api/users', () => {
@@ -57,6 +59,7 @@ describe('ユーザーAPI統合テスト', () => {
       const existingUser = await prisma.user.findUnique({
         where: { id: testUserId }
       });
+      console.log('テストユーザー存在確認:', existingUser); // デバッグ用ログ
       
       expect(existingUser).not.toBeNull();
       

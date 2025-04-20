@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import * as loanController from '../../../src/controllers/loanController';
 import { ApiError } from '../../../src/types';
-import { prisma } from '../../setup';
-import { createTestLoan } from '../../fixtures/testData';
+import { prisma as mockedPrisma } from '../../../src/prisma';
 
 // モックを適切に設定
-vi.mock('../../../src/app', () => {
+vi.mock('../../../src/prisma', () => {
   return {
     prisma: {
       loan: {
@@ -40,9 +39,6 @@ vi.mock('../../../src/app', () => {
   };
 });
 
-// インポートを再割り当て
-// @ts-ignore - 型エラーを無視（テスト用）
-import { prisma as mockedPrisma } from '../../../src/app';
 
 const n = vi.fn();
 describe('貸出コントローラー', () => {

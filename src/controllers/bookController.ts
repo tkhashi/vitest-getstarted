@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prisma';
 import { CreateBookDto, UpdateBookDto, ApiError } from '../types';
 
 // すべての本を取得
@@ -49,27 +49,23 @@ export const getAllBooks = async (req: Request, res: Response, next: NextFunctio
 // 特定の本を取得
 export const getBookById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+    
     const book = await prisma.book.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
         author: true,
         categories: {
           include: {
-            category: true
-          }
+            category: true,
+          },
         },
-        loans: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              }
-            }
-          }
-        }
       },
     });
 
@@ -176,13 +172,19 @@ export const createBook = async (req: Request, res: Response, next: NextFunction
 // 本の情報を更新
 export const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
     const bookData: UpdateBookDto = req.body;
     const { categoryIds, ...bookInfo } = bookData;
 
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
+
     // 本の存在確認
     const existingBook = await prisma.book.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingBook) {
@@ -226,7 +228,7 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
     await prisma.$transaction(async (tx) => {
       // 本の情報を更新
       await tx.book.update({
-        where: { id },
+        where: { id: numericId },
         data: bookInfo,
       });
 
@@ -234,7 +236,7 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
       if (categoryIds !== undefined) {
         // 既存の関連付けを削除
         await tx.bookCategory.deleteMany({
-          where: { bookId: id },
+          where: { bookId: numericId },
         });
 
         // 新しい関連付けを作成
@@ -243,7 +245,7 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
             categoryIds.map((categoryId) =>
               tx.bookCategory.create({
                 data: {
-                  bookId: id,
+                  bookId: numericId,
                   categoryId,
                 },
               })
@@ -255,7 +257,7 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
 
     // 更新後の本の詳細を取得
     const updatedBook = await prisma.book.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
         author: true,
         categories: {
@@ -281,11 +283,17 @@ export const updateBook = async (req: Request, res: Response, next: NextFunction
 // 本を削除
 export const deleteBook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+    const numericId = parseInt(id);
+    
+    // IDが有効な数値かチェック
+    if (id && isNaN(numericId)) {
+      throw new ApiError(400, '無効なID形式です');
+    }
     
     // 本の存在確認
     const existingBook = await prisma.book.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!existingBook) {
@@ -295,7 +303,7 @@ export const deleteBook = async (req: Request, res: Response, next: NextFunction
     // アクティブな貸出がある場合はエラー
     const activeLoans = await prisma.loan.count({
       where: {
-        bookId: id,
+        bookId: numericId,
         returnedAt: null,
       },
     });
@@ -308,17 +316,17 @@ export const deleteBook = async (req: Request, res: Response, next: NextFunction
     await prisma.$transaction(async (tx) => {
       // 本とカテゴリの関連付けを削除
       await tx.bookCategory.deleteMany({
-        where: { bookId: id },
+        where: { bookId: numericId },
       });
 
       // 貸出履歴を削除
       await tx.loan.deleteMany({
-        where: { bookId: id },
+        where: { bookId: numericId },
       });
 
       // 本を削除
       await tx.book.delete({
-        where: { id },
+        where: { id: numericId },
       });
     });
 
